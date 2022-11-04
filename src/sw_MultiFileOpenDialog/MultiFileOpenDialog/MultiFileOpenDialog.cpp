@@ -1,3 +1,8 @@
+//
+// Usage  MultiFileOpenDialog.exe "Text"  "*.txt"  "All Files"  "*.*"
+//
+//
+
 #include <windows.h>
 #include <shobjidl.h> 
 #include <stdio.h> 
@@ -7,7 +12,36 @@ using namespace std;
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
-    COMDLG_FILTERSPEC ComDlgFS[2] = { {L"LAZ/LAS", L"*.laz;*.las"}, {L"All Files",L"*.*"} };
+    int argc;
+    LPTSTR* argv = CommandLineToArgvW(pCmdLine, &argc);
+
+    //MessageBoxW(0, pCmdLine, TEXT("lpCmdLine"), MB_OK);
+    //for (int i = 0; i < argc; ++i) {
+      //  MessageBoxW(0, argv[i], TEXT("argv"), MB_OK);
+    //}
+    
+    // Check for a valid number of arguments! The arguments should be validity checked in the ruby code.
+    // pCmdLine should point to the command line arguments but if this program is spawned without arguments
+    // then pCmdLine points to the executable path.
+    // See also: Chris Wellons, wellons@nullprogram.com. 'The wild west of Windows command line parsing'
+    // https://nullprogram.com/blog/2022/02/18/
+    if (argc <= 2) {
+        cerr << "Wrong number of Filter Spec pairs:" << argc << " found\n";
+        return 1;
+    }
+    if (argc > 20) {
+        cerr << "Maximum number of Filter Spec pairs exceeded:" << argc << " found\n";
+        return 1;
+    }
+
+    // Create Filter Spec aray
+    // example: COMDLG_FILTERSPEC ComDlgFS[] = { {L"LAZ/LAS", L"*.laz;*.las"}, {L"Text",L"*.txt"} , {L"All Files",L"*.*"} };
+    int fs_count = 0;
+    COMDLG_FILTERSPEC ComDlgFS[10] = {};
+    for (int i = 0; i < argc;) {
+        COMDLG_FILTERSPEC ComDlgFSi = { argv[i++], argv[i++] };
+        ComDlgFS[fs_count++] = ComDlgFSi;
+    }
 
     HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED |
         COINIT_DISABLE_OLE1DDE);
@@ -25,7 +59,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
             FILEOPENDIALOGOPTIONS opt{};
             pFileOpen->GetOptions(&opt);
             pFileOpen->SetOptions(opt | FOS_ALLOWMULTISELECT);
-            pFileOpen->SetFileTypes(2, ComDlgFS);
+            pFileOpen->SetFileTypes(fs_count, ComDlgFS);
 
             // Show the Open dialog box.
             hr = pFileOpen->Show(NULL);
